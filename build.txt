@@ -1,0 +1,1 @@
+cl /EHsc main.cpp iCUE.cpp Serial.cpp CUESDK_2017.lib /link user32.lib shell32.lib /subsystem:windows /out:Adapter.exe
