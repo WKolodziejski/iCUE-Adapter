@@ -19,67 +19,54 @@ int caseIndex = -1;
 int fanIndex = -1;
 char fanSpeed = 'd';
 
-const char* toString(CorsairError error)
+const char* ToString(CorsairError error)
 {
 	switch (error)
 	{
-	case CE_Success:
-		return "CE_Success";
-	case CE_ServerNotFound:
-		return "CE_ServerNotFound";
-	case CE_NoControl:
-		return "CE_NoControl";
-	case CE_ProtocolHandshakeMissing:
-		return "CE_ProtocolHandshakeMissing";
-	case CE_IncompatibleProtocol:
-		return "CE_IncompatibleProtocol";
-	case CE_InvalidArguments:
-		return "CE_InvalidArguments";
-	default:
-		return "unknown error";
+		case CE_Success:
+			return "CE_Success";
+		case CE_ServerNotFound:
+			return "CE_ServerNotFound";
+		case CE_NoControl:
+			return "CE_NoControl";
+		case CE_ProtocolHandshakeMissing:
+			return "CE_ProtocolHandshakeMissing";
+		case CE_IncompatibleProtocol:
+			return "CE_IncompatibleProtocol";
+		case CE_InvalidArguments:
+			return "CE_InvalidArguments";
+		default:
+			return "unknown error";
 	}
 }
 
-int getStripIndex() {
+int GetDevideIndex(CorsairDeviceType device)
+{
 	for (int i = 0, size = CorsairGetDeviceCount(); i < size; i++)
-	{
-		if (CorsairGetDeviceInfo(i)->type == CDT_LightingNodePro)
-		{
+		if (CorsairGetDeviceInfo(i)->type == device)
 			return i;
-		}
-	}
-	return -1;
-}
-
-int getFanIndex() {
-	for (int i = 0, size = CorsairGetDeviceCount(); i < size; i++)
-	{
-		if (CorsairGetDeviceInfo(i)->type == CDT_CommanderPro)
-		{
-			return i;
-		}
-	}
-	return -1;
-}
-
-int getCaseIndex() {
-	for (int i = 0, size = CorsairGetDeviceCount(); i < size; i++)
-	{
-		if (CorsairGetDeviceInfo(i)->type == CDT_MouseMat)
-		{
-			return i;
-		}
-	}
+	
 	return -1;
 }
 
 bool InitLEDs()
 {
+	if (!arduino)		//It means the program has been initialized before (e.g. on windows wake up)
+	{
+		arduino = new Serial("\\\\.\\COM4");
+
+		if (!arduino->IsConnected())
+		{
+			std::cerr << "Arduino not found" << std::endl;
+			return false;
+		}
+	}
+
 	CorsairPerformProtocolHandshake();
 
 	while (CorsairGetLastError() == CE_ServerNotFound)
 	{
-		std::cout << ".";
+		//std::cout << ".";
 		Sleep(5000);
 		CorsairPerformProtocolHandshake();
 	}
@@ -88,47 +75,19 @@ bool InitLEDs()
 
 	if (error != CE_Success)
 	{
-		std::cout << "Handshake failed: " << toString(error) << std::endl;
+		std::cerr << "Handshake failed: " << ToString(error) << std::endl;
 		return false;
 	}
 
-	std::cout << "SDK connected" << std::endl;
-
-	if (!arduino)
+	while (stripIndex < 0 && caseIndex < 0 && fanIndex < 0)
 	{
-		arduino = new Serial("\\\\.\\COM4");
-
-		if (arduino->IsConnected())
-			std::cout << "Arduino connected" << std::endl;
-		else
-		{
-			std::cout << "Arduino not found" << std::endl;
-			return false;
-		}
+		stripIndex = GetDevideIndex(CDT_LightingNodePro);
+		caseIndex = GetDevideIndex(CDT_MouseMat);
+		fanIndex = GetDevideIndex(CDT_CommanderPro);
+		//std::cout << ".";
+		Sleep(5000);
 	}
-
-	stripIndex = getStripIndex();
-	caseIndex = getCaseIndex();
-	fanIndex = getFanIndex();
-
-	if (stripIndex < 0)
-	{
-		std::cout << "LED strip not found " << std::endl;
-		return false;
-	}
-
-	if (caseIndex < 0)
-	{
-		std::cout << "Case LED not found " << std::endl;
-		return false;
-	}
-
-	if (fanIndex < 0)
-	{
-		std::cout << "FAN not found " << std::endl;
-		return false;
-	}
-
+	
 	CorsairLedPositions* p1 = CorsairGetLedPositionsByDeviceIndex(stripIndex);
 	CorsairLedPositions* p2 = CorsairGetLedPositionsByDeviceIndex(caseIndex);
 	CorsairLedPositions* p3 = CorsairGetLedPositionsByDeviceIndex(fanIndex);
@@ -137,7 +96,6 @@ bool InitLEDs()
 		stripLeds[i].ledId = p1->pLedPosition[i].ledId;
 
 	caseLeds[0].ledId = p2->pLedPosition[0].ledId;
-
 	fanTemp[0].ledId = p3->pLedPosition[0].ledId;
 
 	return true;
@@ -164,7 +122,11 @@ bool UpdateLEDs()
 				if (!arduino->WriteData(buffer, 5)) break;
 			}
 		}
-		else return false;
+		else
+		{
+			std::cerr << "Fail in strip" << std::endl;
+			return false;
+		}
 
 		if (CorsairGetLedsColorsByDeviceIndex(caseIndex, 1, caseLeds))
 		{
@@ -177,13 +139,17 @@ bool UpdateLEDs()
 
 			arduino->WriteData(buffer, 4);
 		}
-		else return false;
+		else
+		{
+			std::cerr << "Fail in case" << std::endl;
+			return false;
+		}
 
 		return true;
 	}
 	else 
 	{
-		std::cout << "Error" << std::endl;
+		std::cerr << "Error in LEDs" << std::endl;
 		return false;
 	}
 }
@@ -241,7 +207,7 @@ bool UpdateTemp()
 	}
 	else
 	{
-		std::cout << "Error" << std::endl;
+		std::cerr << "Error temperature" << std::endl;
 		return false;
 	}
 }
@@ -253,12 +219,6 @@ void ChangeColorMode(char c)
 	buffer[0] = 'c';		//Cor
 	buffer[1] = c;
 
-	if (!arduino->WriteData(buffer, 2))
-	{
-		std::cout << "Serial write failed" << std::endl;
-	}
-	else
-	{
-		std::cout << "Color mode changed" << std::endl;
-	}
+	std::cerr << (arduino->WriteData(buffer, 2) ? 
+		"Color mode changed" : "Serial write failed") << std::endl;
 }

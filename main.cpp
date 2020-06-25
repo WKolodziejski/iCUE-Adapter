@@ -33,32 +33,32 @@ NOTIFYICONDATA g_notifyIconData;
 #pragma endregion
 
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
+void handleCallbackStop();
 
 #pragma region callbacks
 VOID CALLBACK UpdateLEDsCallback(HWND hWnd, UINT nMsg, UINT nIDEvent, DWORD dwTime) {
     if (!UpdateLEDs()) {
-        KillTimer(NULL, t_leds);
-        
-        while (!InitLEDs())
-        {
-            Sleep(1000);
-        }
-
-        t_leds = SetTimer(NULL, 0, 100, &UpdateLEDsCallback);
+        handleCallbackStop();
     }
 }
 
 VOID CALLBACK UpdateTempCallback(HWND hWnd, UINT nMsg, UINT nIDEvent, DWORD dwTime) {
     if (!UpdateTemp()) {
-        KillTimer(NULL, t_temp);
-
-        while (!InitLEDs())
-        {
-            Sleep(1000);
-        }
-
-        t_temp = SetTimer(NULL, 0, 5000, &UpdateTempCallback);
+        handleCallbackStop();        
     }
+}
+
+void handleCallbackStop() {
+    KillTimer(NULL, t_leds);
+    KillTimer(NULL, t_temp);
+
+    while (!InitLEDs())
+    {
+        Sleep(1000);
+    }
+
+    t_leds = SetTimer(NULL, 0, 100, &UpdateLEDsCallback);
+    t_temp = SetTimer(NULL, 0, 5000, &UpdateTempCallback);
 }
 #pragma endregion
 
@@ -119,7 +119,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR args, int
     }
 
     t_leds = SetTimer(NULL, 0, 50, &UpdateLEDsCallback);
-    t_leds = SetTimer(NULL, 0, 5000, &UpdateTempCallback);
+    t_temp = SetTimer(NULL, 0, 5000, &UpdateTempCallback);
 
 #pragma endregion
 
@@ -136,6 +136,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR args, int
     }
 
     KillTimer(NULL, t_leds);
+    KillTimer(NULL, t_temp);
 
     return msg.wParam;
 }
