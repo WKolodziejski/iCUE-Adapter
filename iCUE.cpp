@@ -1,4 +1,4 @@
-#define CORSAIR_LIGHTING_SDK_DISABLE_DEPRECATION_WARNINGS
+//#define CORSAIR_LIGHTING_SDK_DISABLE_DEPRECATION_WARNINGS
 
 #include <iostream>
 #include<string>
@@ -11,32 +11,32 @@
 #include "iCUE.h"
 
 Serial* arduino;
-CorsairLedColor stripLeds[10];
-CorsairLedColor caseLeds[1];
-CorsairLedColor fanTemp[1];
-int stripIndex = -1;
-int caseIndex = -1;
-int fanIndex = -1;
-char fanSpeed = 'd';
+CorsairLedColor leds[20];
+//CorsairLedColor caseLeds[1];
+//CorsairLedColor fanTemp[1];
+int index = -1;
+//int caseIndex = -1;
+//int fanIndex = -1;
+//char fanSpeed = 'd';
 
 const char* ToString(CorsairError error)
 {
 	switch (error)
 	{
 		case CE_Success:
-			return "CE_Success";
+			return "Success";
 		case CE_ServerNotFound:
-			return "CE_ServerNotFound";
+			return "Server Not Found";
 		case CE_NoControl:
-			return "CE_NoControl";
+			return "No Control";
 		case CE_ProtocolHandshakeMissing:
-			return "CE_ProtocolHandshakeMissing";
+			return "Protocol Handshake Missing";
 		case CE_IncompatibleProtocol:
-			return "CE_IncompatibleProtocol";
+			return "Incompatible Protocol";
 		case CE_InvalidArguments:
-			return "CE_InvalidArguments";
+			return "Invalid Arguments";
 		default:
-			return "unknown error";
+			return "Unknown Error";
 	}
 }
 
@@ -53,23 +53,31 @@ bool InitLEDs()
 {
 	if (!arduino)		//It means the program has been initialized before (e.g. on windows wake up)
 	{
-		arduino = new Serial("\\\\.\\COM4");
+		arduino = new Serial("\\\\.\\COM6");
 
 		if (!arduino->IsConnected())
 		{
 			std::cerr << "Arduino not found" << std::endl;
 			return false;
 		}
+		else
+		{
+			std::cout << "Arduino on COM6" << std::endl;
+		}
 	}
 
 	CorsairPerformProtocolHandshake();
 
-	while (CorsairGetLastError() == CE_ServerNotFound)
+	std::cout << "Connecting to iCUE";
+
+	while (const auto error = CorsairGetLastError())
 	{
-		//std::cout << ".";
+		std::cout << ".";
 		Sleep(5000);
 		CorsairPerformProtocolHandshake();
 	}
+
+	std::cout << std::endl;
 
 	CorsairError error = CorsairGetLastError();
 
@@ -78,25 +86,32 @@ bool InitLEDs()
 		std::cerr << "Handshake failed: " << ToString(error) << std::endl;
 		return false;
 	}
-
-	while (stripIndex < 0 && caseIndex < 0 && fanIndex < 0)
+	else
 	{
-		stripIndex = GetDevideIndex(CDT_LightingNodePro);
-		caseIndex = GetDevideIndex(CDT_MouseMat);
-		fanIndex = GetDevideIndex(CDT_CommanderPro);
-		//std::cout << ".";
-		Sleep(5000);
+		std::cout << "Connected" << std::endl;
 	}
+
+	std::cout << "Getting devices";
+
+	index = GetDevideIndex(CDT_LightingNodePro);
+
+	while (index < 0)
+	{
+		index = GetDevideIndex(CDT_LightingNodePro);
+		//fanIndex = GetDevideIndex(CDT_CommanderPro);
+		std::cout << ".";
+		Sleep(1000);
+	}
+
+	std::cout << std::endl << "Done" << std::endl;
 	
-	CorsairLedPositions* p1 = CorsairGetLedPositionsByDeviceIndex(stripIndex);
-	CorsairLedPositions* p2 = CorsairGetLedPositionsByDeviceIndex(caseIndex);
-	CorsairLedPositions* p3 = CorsairGetLedPositionsByDeviceIndex(fanIndex);
+	CorsairLedPositions* p1 = CorsairGetLedPositionsByDeviceIndex(index);
+	//CorsairLedPositions* p3 = CorsairGetLedPositionsByDeviceIndex(fanIndex);
 
-	for (int i = 0; i < 10; i++)
-		stripLeds[i].ledId = p1->pLedPosition[i].ledId;
+	for (int i = 0; i < 20; i++)
+		leds[i].ledId = p1->pLedPosition[i].ledId;
 
-	caseLeds[0].ledId = p2->pLedPosition[0].ledId;
-	fanTemp[0].ledId = p3->pLedPosition[0].ledId;
+	//fanTemp[0].ledId = p3->pLedPosition[0].ledId;
 
 	return true;
 }
@@ -107,41 +122,33 @@ bool UpdateLEDs()
 
 	if (arduino->IsConnected() && error == CE_Success)
 	{
-		if (CorsairGetLedsColorsByDeviceIndex(stripIndex, 10, stripLeds))
+		if (CorsairGetLedsColorsByDeviceIndex(index, 20, leds))
 		{
 			for (int i = 1; i < 10; i++)
 			{
-				char buffer[5];
+				char buffer1[5];
 
-				buffer[0] = 'f';	//Fita
-				buffer[1] = (char)i;
-				buffer[2] = (char)stripLeds[i].r;
-				buffer[3] = (char)stripLeds[i].g;
-				buffer[4] = (char)stripLeds[i].b;
+				buffer1[0] = 'f';	//Fita
+				buffer1[1] = (char)i;
+				buffer1[2] = (char)leds[i].r;
+				buffer1[3] = (char)leds[i].g;
+				buffer1[4] = (char)leds[i].b;
 
-				if (!arduino->WriteData(buffer, 5)) break;
+				arduino->WriteData(buffer1, 5);
 			}
+
+			char buffer2[4];
+
+			buffer2[0] = 'g';	//Gabinete
+			buffer2[1] = (char)leds[10].r;
+			buffer2[2] = (char)leds[10].g;
+			buffer2[3] = (char)leds[10].b;
+
+			arduino->WriteData(buffer2, 4);
 		}
 		else
 		{
-			std::cerr << "Fail in strip" << std::endl;
-			return false;
-		}
-
-		if (CorsairGetLedsColorsByDeviceIndex(caseIndex, 1, caseLeds))
-		{
-			char buffer[4];
-
-			buffer[0] = 'g';	//Gabinete
-			buffer[1] = (char)caseLeds[0].r;
-			buffer[2] = (char)caseLeds[0].g;
-			buffer[3] = (char)caseLeds[0].b;
-
-			arduino->WriteData(buffer, 4);
-		}
-		else
-		{
-			std::cerr << "Fail in case" << std::endl;
+			std::cerr << "Serial writing failed" << std::endl;
 			return false;
 		}
 
@@ -149,12 +156,12 @@ bool UpdateLEDs()
 	}
 	else 
 	{
-		std::cerr << "Error in LEDs" << std::endl;
+		std::cerr << "Error in getting device" << std::endl;
 		return false;
 	}
 }
 
-bool UpdateTemp()
+/*bool UpdateTemp()
 {
 	CorsairError error = CorsairGetLastError();
 
@@ -210,7 +217,7 @@ bool UpdateTemp()
 		std::cerr << "Error temperature" << std::endl;
 		return false;
 	}
-}
+}*/
 
 void ChangeColorMode(char c) 
 {

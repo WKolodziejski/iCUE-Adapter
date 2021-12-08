@@ -1,0 +1,10 @@
+
+*.obj
+*.exe
+*.ipch
+*.db-wal
+*.db-shm
+*.db
+*.sqlite
+*.json
+.vs/iCUE-Adapter/v16/.suo

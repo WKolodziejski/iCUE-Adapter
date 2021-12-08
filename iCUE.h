@@ -1,4 +1,4 @@
 bool InitLEDs();
 bool UpdateLEDs();
-bool UpdateTemp();
+//bool UpdateTemp();
 void ChangeColorMode(char c);

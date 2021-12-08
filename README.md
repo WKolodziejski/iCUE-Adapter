@@ -33,6 +33,6 @@ But that's optional.
 
 ## Notice 2
 My LED strip has 17 LEDs, so I did some tricks to the LEDs reading from SDK.
-Basically, my program reads 9 LEDs from iCue, sends to Arduino and it double the leds where the first LED of iCUE strip is ignored; the second one is mapped 1:1; and the others are 1:2.
+Basically, my program reads 9 LEDs from iCue, sends to Arduino and it doubles the leds where the first LED of iCUE strip is ignored; the second one is mapped 1:1; and the others are 1:2.
 
 ![Strip img](https://github.com/WKolodziejski/iCUE-Adapter/blob/master/Strip.PNG?raw=true)

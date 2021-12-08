@@ -24,7 +24,7 @@
 #pragma region constants and globals
 UINT WM_TASKBARCREATED = 0;
 UINT t_leds;
-UINT t_temp;
+//UINT t_temp;
 HWND g_hwnd;
 HMENU g_menu;
 HWND g_console;
@@ -42,15 +42,15 @@ VOID CALLBACK UpdateLEDsCallback(HWND hWnd, UINT nMsg, UINT nIDEvent, DWORD dwTi
     }
 }
 
-VOID CALLBACK UpdateTempCallback(HWND hWnd, UINT nMsg, UINT nIDEvent, DWORD dwTime) {
+/*VOID CALLBACK UpdateTempCallback(HWND hWnd, UINT nMsg, UINT nIDEvent, DWORD dwTime) {
     if (!UpdateTemp()) {
         handleCallbackStop();        
     }
-}
+}*/
 
 void handleCallbackStop() {
     KillTimer(NULL, t_leds);
-    KillTimer(NULL, t_temp);
+    //KillTimer(NULL, t_temp);
 
     while (!InitLEDs())
     {
@@ -58,7 +58,7 @@ void handleCallbackStop() {
     }
 
     t_leds = SetTimer(NULL, 0, 100, &UpdateLEDsCallback);
-    t_temp = SetTimer(NULL, 0, 5000, &UpdateTempCallback);
+    //t_temp = SetTimer(NULL, 0, 5000, &UpdateTempCallback);
 }
 #pragma endregion
 
@@ -71,7 +71,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR args, int
      AllocConsole();
      freopen("CON", "w", stdout);
      g_console = FindWindowA("ConsoleWindowClass", NULL);
-     ShowWindow(g_console, SW_HIDE);
+     ShowWindow(g_console, SW_NORMAL);
 #pragma endregion
 
 #pragma region get window up
@@ -119,7 +119,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR args, int
     }
 
     t_leds = SetTimer(NULL, 0, 50, &UpdateLEDsCallback);
-    t_temp = SetTimer(NULL, 0, 5000, &UpdateTempCallback);
+    //t_temp = SetTimer(NULL, 0, 5000, &UpdateTempCallback);
 
 #pragma endregion
 
@@ -136,7 +136,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR args, int
     }
 
     KillTimer(NULL, t_leds);
-    KillTimer(NULL, t_temp);
+    //KillTimer(NULL, t_temp);
 
     return msg.wParam;
 }
